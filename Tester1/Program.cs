@@ -12,17 +12,16 @@ namespace PerformanceTest
     {
         static void Main(string[] args)
         {
-
+            var count = 1000000;
+            Console.WriteLine("start test with {0:N0} messages", count);
             Stopwatch sw = Stopwatch.StartNew();
-            var count = 10000000;
+
             TestLoggerHierarchy(count);
             sw.Stop();
-            Console.WriteLine("{2:N} messages. Time taken: {0:N}ms. {1:N} / sec", sw.Elapsed.TotalMilliseconds, 
-                ((double)count / sw.Elapsed.TotalMilliseconds)*1000, count);
+            Console.WriteLine("{2:N} messages. Time taken: {0:N}ms. {1:N} / sec", sw.Elapsed.TotalMilliseconds,
+                ((double)count / sw.Elapsed.TotalMilliseconds) * 1000, count);
             Console.ReadKey();
         }
-
-
 
         private static void TestLoggerHierarchy(int count)
         {
@@ -65,8 +64,8 @@ namespace PerformanceTest
 
                     for (var line = 0; line < (count + (i * 100)); line++)
                     {
-                          mipLogger.Info("MIP : {0}" + line);
-                         // mipLogger.Info(new LogEventInfo(LogLevel.Info, "mipLogger", "MIP : " + line));
+                        mipLogger.Info("MIP : {0}" + line);
+                        // mipLogger.Info(new LogEventInfo(LogLevel.Info, "mipLogger", "MIP : " + line));
                     }
                     LogManager.Flush();
                     mipLogger.Info("MIP Finished");
