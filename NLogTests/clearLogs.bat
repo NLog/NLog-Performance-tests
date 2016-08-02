@@ -1,1 +1,1 @@
-del /S /Q C:\logs\application\*
+del /S /Q logs\application\*

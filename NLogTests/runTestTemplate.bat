@@ -10,4 +10,4 @@ for /D %%A IN ("Config\*") DO (
 )
 
 mkdir logs\%trimmed%
-xcopy C:\logs\application\* logs\%trimmed%\* /s /y
+xcopy logs\application\* logs\%trimmed%\* /s /y
