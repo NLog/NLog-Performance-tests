@@ -1,4 +1,3 @@
-
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
@@ -15,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NLog.netfx45", "NLog\src\NLog\NLog.netfx45.csproj", "{A0BFF0DB-ED9A-4639-AE86-8E709A1EFC66}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NLogPerformance", "NLogPerformance\NLogPerformance.csproj", "{1788E4A4-1DFC-46D1-BC1E-B69E8F2D76B9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManyThreadsTester", "ManyThreadsTester\ManyThreadsTester\ManyThreadsTester.csproj", "{E4AF9AB1-C7B2-40EB-B38F-2D173F8A5E31}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,6 +35,10 @@ Global
 		{1788E4A4-1DFC-46D1-BC1E-B69E8F2D76B9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1788E4A4-1DFC-46D1-BC1E-B69E8F2D76B9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1788E4A4-1DFC-46D1-BC1E-B69E8F2D76B9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E4AF9AB1-C7B2-40EB-B38F-2D173F8A5E31}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E4AF9AB1-C7B2-40EB-B38F-2D173F8A5E31}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E4AF9AB1-C7B2-40EB-B38F-2D173F8A5E31}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E4AF9AB1-C7B2-40EB-B38F-2D173F8A5E31}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
