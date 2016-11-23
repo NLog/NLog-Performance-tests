@@ -11,29 +11,40 @@ namespace NLogPerformance
         private static int _messageCount = 10000000;
         private static int _threadCount = 1;
         private static int _messageSize = 16;
+        private static int _loggerCount = 1;
 
         static void Main(string[] args)
         {
-            if ((args.Length >= 1) && (!int.TryParse(args[0], out _messageCount)) || (_messageCount < 1))
+            if ((args.Length > 0) && (!int.TryParse(args[0], out _messageCount)) || (_messageCount < 1))
             {
-                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize]");
+                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]");
                 throw new ArgumentException("Invalid first argument! Message-count as first application argument.");
             }
-            if ((args.Length >= 2) && (!int.TryParse(args[1], out _threadCount)) || (_threadCount < 1))
+            if ((args.Length > 1) && (!int.TryParse(args[1], out _threadCount)) || (_threadCount < 1))
             {
-                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize]");
+                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]");
                 throw new ArgumentException("Invalid second argument! Thread-count as second application argument.");
             }
-            if ((args.Length >= 3) && (!int.TryParse(args[2], out _messageSize)) || (_messageSize < 1))
+            if ((args.Length > 2) && (!int.TryParse(args[2], out _messageSize)) || (_messageSize < 1))
             {
-                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize]");
+                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]");
                 throw new ArgumentException("Invalid third argument! Message-size as third application argument.");
             }
+            if ((args.Length > 3) && (!int.TryParse(args[3], out _messageSize)) || (_loggerCount < 1))
+            {
+                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]");
+                throw new ArgumentException("Invalid fourth argument! Logger-count as fourth application argument.");
+            }
 
-            Console.WriteLine("Stopwatch.IsHighResolution = {0}", Stopwatch.IsHighResolution);
-            Console.WriteLine("Start test with {0} loggers writing {1:N0} messages with size={2}", _threadCount, _messageCount, _messageSize);
+            Console.WriteLine("Start test with:");
+            Console.WriteLine(" - {0} Messages (Size={1})", _messageCount, _messageSize);
+            Console.WriteLine(" - {0} Threads", _threadCount);
+            Console.WriteLine(" - {0} Loggers", _loggerCount);
+            Console.WriteLine("");
 
-            int countPerThread = _messageCount / _threadCount;
+            int loggerPerThread = Math.Max(_loggerCount / _threadCount, 1);
+            int countPerThread = _messageCount / _threadCount / loggerPerThread;
+            int actualMessageCount = countPerThread * _threadCount * loggerPerThread;
 
             var logger = LogManager.GetLogger("logger");
 
@@ -43,7 +54,7 @@ namespace NLogPerformance
             string logMessage = sb.ToString();
 
             Console.WriteLine("Executing warmup run...");
-            RunTest(logger, logMessage, 1, 100000);  // Warmup run
+            RunTest(logger, logMessage, 1, 100000, 1);  // Warmup run
 
             GC.Collect(2, GCCollectionMode.Forced, true);
             int gc2count = GC.CollectionCount(2);
@@ -54,20 +65,28 @@ namespace NLogPerformance
             Stopwatch stopWatch = new Stopwatch();
             stopWatch.Start();
 
-            RunTest(logger, logMessage, _threadCount, countPerThread);  // Real performance run
+            RunTest(logger, logMessage, _threadCount, countPerThread, loggerPerThread);  // Real performance run
 
             stopWatch.Stop();
 
             // Show report message.
-            var throughput = _messageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
-            Console.WriteLine("Written {0} values in {1}ms (throughput = {2:F3} Msgs/sec)", _messageCount, stopWatch.ElapsedMilliseconds, throughput);
-            Console.WriteLine("GC2 {0}", GC.CollectionCount(2) - gc2count);
-            Console.WriteLine("GC1 {0}", GC.CollectionCount(1) - gc1count);
-            Console.WriteLine("GC0 {0}", GC.CollectionCount(0) - gc0count);
-            Console.WriteLine("Mem {0:G3} MByte", (double)GC.GetTotalMemory(false) / 1024.0 / 1024.0);
+            Console.WriteLine("Written {0} values. Memory Usage={0:G3} MBytes", _messageCount, (double)GC.GetTotalMemory(false) / 1024.0 / 1024.0);
+            var throughput = actualMessageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
+            Console.WriteLine("| Test Name  | Time (ms)  | Msgs/sec   | GC2 | GC1 | GC0 |");
+            Console.WriteLine("|------------|------------|------------|-----|-----|-----|");
+            Console.WriteLine(
+                string.Format("| My Test    | {0,10} | {1,10} | {2,3} | {3,3} | {4,3} |",
+                stopWatch.ElapsedMilliseconds,
+                (long)throughput,
+                GC.CollectionCount(2) - gc2count,
+                GC.CollectionCount(1) - gc1count,
+                GC.CollectionCount(0) - gc0count));
 
             if (stopWatch.ElapsedMilliseconds < 5000)
                 Console.WriteLine("!!! Test completed too quickly, to give useful numbers !!!");
+
+            if (!Stopwatch.IsHighResolution)
+                Console.WriteLine("!!! Stopwatch.IsHighResolution = False !!!");
 #if DEBUG
             Console.WriteLine("!!! Using DEBUG build !!!");
 #endif
@@ -76,16 +95,23 @@ namespace NLogPerformance
             Console.ReadKey();
         }
 
-        private static void RunTest(Logger logger, string logMessage, int threadCount, int messageCount)
+        private static void RunTest(Logger logger, string logMessage, int threadCount, int messageCount, int loggerCount)
         {
             try
             {
                 Action<object> producer = state =>
                 {
+                    Logger[] loggerArray = loggerCount <= 1 ? new Logger[] { logger } : new Logger[loggerCount];
+                    if (loggerArray.Length > 1)
+                    {
+                        for (int i = 0; i < loggerArray.Length; ++i)
+                            loggerArray[i] = LogManager.GetLogger(string.Format("Logger-{0}-{1}", System.Threading.Thread.CurrentThread.ManagedThreadId, i));
+                    }
+
                     for (var i = 0; i < messageCount; i++)
                     {
-                        // Different loggers will be used here for testing...
-                        logger.Info(logMessage);
+                        for (int j = 0; j < loggerArray.Length; ++j)
+                            loggerArray[j].Info(logMessage);
                     }
                 };
                 if (threadCount <= 1)
