@@ -12,7 +12,7 @@ namespace NLogPerformance
         private static int _threadCount = 1;
         private static int _messageSize = 16;
         private static int _loggerCount = 1;
-
+        
         static void Main(string[] args)
         {
             if ((args.Length > 0) && (!int.TryParse(args[0], out _messageCount)) || (_messageCount < 1))
@@ -56,6 +56,8 @@ namespace NLogPerformance
             Console.WriteLine("Executing warmup run...");
             RunTest(logger, logMessage, 1, 100000, 1);  // Warmup run
 
+            var currentProcess = Process.GetCurrentProcess();
+
             GC.Collect(2, GCCollectionMode.Forced, true);
             int gc2count = GC.CollectionCount(2);
             int gc1count = GC.CollectionCount(1);
@@ -65,22 +67,29 @@ namespace NLogPerformance
             Stopwatch stopWatch = new Stopwatch();
             stopWatch.Start();
 
+            TimeSpan cpuTimeBefore = currentProcess.TotalProcessorTime;
+
             RunTest(logger, logMessage, _threadCount, countPerThread, loggerPerThread);  // Real performance run
 
             stopWatch.Stop();
 
+            TimeSpan cpuTimeAfter = currentProcess.TotalProcessorTime;
+            long peakMemory = currentProcess.PeakWorkingSet64;
+
             // Show report message.
-            Console.WriteLine("Written {0} values. Memory Usage={0:G3} MBytes", _messageCount, (double)GC.GetTotalMemory(false) / 1024.0 / 1024.0);
+            Console.WriteLine("Written {0} values. Memory Usage={1:G3} MBytes", _messageCount, (double)GC.GetTotalMemory(false) / 1024.0 / 1024.0);
             var throughput = actualMessageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
-            Console.WriteLine("| Test Name  | Time (ms)  | Msgs/sec   | GC2 | GC1 | GC0 |");
-            Console.WriteLine("|------------|------------|------------|-----|-----|-----|");
+            Console.WriteLine("| Test Name  | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Mem (MB) |");
+            Console.WriteLine("|------------|-----------|-----------|-----|-----|-----|----------|----------|");
             Console.WriteLine(
-                string.Format("| My Test    | {0,10} | {1,10} | {2,3} | {3,3} | {4,3} |",
+                string.Format("| My Test    | {0,9} | {1,9} | {2,3} | {3,3} | {4,3} | {5,8} | {6,8:G3} |",
                 stopWatch.ElapsedMilliseconds,
                 (long)throughput,
                 GC.CollectionCount(2) - gc2count,
                 GC.CollectionCount(1) - gc1count,
-                GC.CollectionCount(0) - gc0count));
+                GC.CollectionCount(0) - gc0count,
+                (int)(cpuTimeAfter - cpuTimeBefore).TotalMilliseconds,
+                peakMemory / 1024.0 / 1024.0));
 
             if (stopWatch.ElapsedMilliseconds < 5000)
                 Console.WriteLine("!!! Test completed too quickly, to give useful numbers !!!");
