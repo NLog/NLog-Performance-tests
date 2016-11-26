@@ -16,25 +16,32 @@ namespace NLogPerformance
         
         static void Main(string[] args)
         {
+            var usage = "Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount] [WaitForUserInteraction (true/false)]";
             if ((args.Length > 0) && (!int.TryParse(args[0], out _messageCount)) || (_messageCount < 1))
             {
-                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]");
+                Console.WriteLine(usage);
                 throw new ArgumentException("Invalid first argument! Message-count as first application argument.");
             }
             if ((args.Length > 1) && (!int.TryParse(args[1], out _threadCount)) || (_threadCount < 1))
             {
-                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]");
+                Console.WriteLine(usage);
                 throw new ArgumentException("Invalid second argument! Thread-count as second application argument.");
             }
             if ((args.Length > 2) && (!int.TryParse(args[2], out _messageSize)) || (_messageSize < 1))
             {
-                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]");
+                Console.WriteLine(usage);
                 throw new ArgumentException("Invalid third argument! Message-size as third application argument.");
             }
             if ((args.Length > 3) && (!int.TryParse(args[3], out _loggerCount)) || (_loggerCount < 1))
             {
-                Console.WriteLine("Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]");
+                Console.WriteLine(usage);
                 throw new ArgumentException("Invalid fourth argument! Logger-count as fourth application argument.");
+            }
+            var waitForUserInteraction = true;
+            if (args.Length > 4 && !(bool.TryParse(args[4], out waitForUserInteraction)))
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException("Invalid 5th argument! waitForUserInteraction - true or false.");
             }
 
             Console.WriteLine("Start test with:");
