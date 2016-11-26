@@ -13,6 +13,13 @@ namespace PerformanceTest
         static void Main(string[] args)
         {
             var count = 1000000;
+            var usage = "Usage: PerformanceTest.exe [MessageCount]";
+
+            if ((args.Length > 0) && (!int.TryParse(args[0], out count)) || (count < 1))
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException("Invalid first argument! Message-count as first application argument.");
+            }         
 
             //gdc test (now disabled)
             string jobId = System.Guid.NewGuid().ToString();
@@ -32,7 +39,10 @@ namespace PerformanceTest
 
             Console.WriteLine("{2:N} messages. Time taken: {0:N}ms. {1:N} / sec", sw.Elapsed.TotalMilliseconds,
                 ((double)count / sw.Elapsed.TotalMilliseconds) * 1000, count);
-            Console.ReadKey();
+            if (args == null || args.Length == 0)
+            {
+                Console.ReadKey();
+            }
         }
 
         private static void WriteMessages(Logger logger, int count)
