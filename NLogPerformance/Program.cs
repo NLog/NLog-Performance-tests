@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 
@@ -15,7 +16,7 @@ namespace NLogPerformance
         
         static void Main(string[] args)
         {
-            var usage = "Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount] [WaitForUserInteraction (true/false)]";
+            var usage = "Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]";
             if ((args.Length > 0) && (!int.TryParse(args[0], out _messageCount)) || (_messageCount < 1))
             {
                 Console.WriteLine(usage);
@@ -31,16 +32,10 @@ namespace NLogPerformance
                 Console.WriteLine(usage);
                 throw new ArgumentException("Invalid third argument! Message-size as third application argument.");
             }
-            if ((args.Length > 3) && (!int.TryParse(args[3], out _messageSize)) || (_loggerCount < 1))
+            if ((args.Length > 3) && (!int.TryParse(args[3], out _loggerCount)) || (_loggerCount < 1))
             {
                 Console.WriteLine(usage);
                 throw new ArgumentException("Invalid fourth argument! Logger-count as fourth application argument.");
-            }
-            var waitForUserInteraction = true;
-            if (args.Length > 4 && !(bool.TryParse(args[4], out waitForUserInteraction)))
-            {
-                Console.WriteLine(usage);
-                throw new ArgumentException("Invalid 5th argument! waitForUserInteraction - true or false.");
             }
 
             Console.WriteLine("Start test with:");
@@ -48,10 +43,6 @@ namespace NLogPerformance
             Console.WriteLine(" - {0} Threads", _threadCount);
             Console.WriteLine(" - {0} Loggers", _loggerCount);
             Console.WriteLine("");
-
-            int loggerPerThread = Math.Max(_loggerCount / _threadCount, 1);
-            int countPerThread = _messageCount / _threadCount / loggerPerThread;
-            int actualMessageCount = countPerThread * _threadCount * loggerPerThread;
 
             var logger = LogManager.GetLogger("logger");
 
@@ -66,6 +57,7 @@ namespace NLogPerformance
             var currentProcess = Process.GetCurrentProcess();
 
             GC.Collect(2, GCCollectionMode.Forced, true);
+            Thread.Sleep(2000); // Allow .NET runtime to do its background thing, before we start
             int gc2count = GC.CollectionCount(2);
             int gc1count = GC.CollectionCount(1);
             int gc0count = GC.CollectionCount(0);
@@ -76,7 +68,7 @@ namespace NLogPerformance
 
             TimeSpan cpuTimeBefore = currentProcess.TotalProcessorTime;
 
-            RunTest(logger, logMessage, _threadCount, countPerThread, loggerPerThread);  // Real performance run
+            RunTest(logger, logMessage, _threadCount, _messageCount, _loggerCount);  // Real performance run
 
             stopWatch.Stop();
 
@@ -85,7 +77,7 @@ namespace NLogPerformance
 
             // Show report message.
             Console.WriteLine("Written {0} values. Memory Usage={1:G3} MBytes", _messageCount, (double)GC.GetTotalMemory(false) / 1024.0 / 1024.0);
-            var throughput = actualMessageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
+            var throughput = _messageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
             Console.WriteLine("");
             Console.WriteLine("| Test Name  | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Mem (MB) |");
             Console.WriteLine("|------------|-----------|-----------|-----|-----|-----|----------|----------|");
@@ -109,8 +101,7 @@ namespace NLogPerformance
 #if DEBUG
             Console.WriteLine("!!! Using DEBUG build !!!");
 #endif
-
-            if (waitForUserInteraction)
+            if (args == null || args.Length == 0)
             {
                 // Wait for user stop action.
                 Console.WriteLine("Press any key to exit...");
@@ -122,24 +113,37 @@ namespace NLogPerformance
         {
             try
             {
+                int loggerPerThread = Math.Max(loggerCount / threadCount, 1);
+                int countPerThread = messageCount - 1 / threadCount / loggerPerThread;
+                int actualMessageCount = countPerThread * threadCount * loggerPerThread;
+
                 Action<object> producer = state =>
                 {
-                    Logger[] loggerArray = loggerCount <= 1 ? new Logger[] { logger } : new Logger[loggerCount];
-                    if (loggerArray.Length > 1)
+                    Logger[] loggerArray = loggerCount <= 1 ? new Logger[] { logger } : new Logger[Math.Max(loggerPerThread,1)];
+                    if (loggerCount > 1)
                     {
                         for (int i = 0; i < loggerArray.Length; ++i)
                             loggerArray[i] = LogManager.GetLogger(string.Format("Logger-{0}-{1}", System.Threading.Thread.CurrentThread.ManagedThreadId, i));
                     }
 
-                    for (var i = 0; i < messageCount; i++)
+                    for (var i = 0; i < countPerThread; i++)
                     {
                         for (int j = 0; j < loggerArray.Length; ++j)
                             loggerArray[j].Info(logMessage);
                     }
                 };
+
+                Action<object> missingMessages = state =>
+                {
+                    for (int i = 0; i < messageCount - actualMessageCount; ++i)
+                        logger.Info(logMessage);
+                };
+
                 if (threadCount <= 1)
                 {
                     producer(null); // Do the testing without spinning up tasks
+                    if (actualMessageCount != messageCount)
+                        missingMessages(null);
                 }
                 else
                 {
@@ -149,6 +153,8 @@ namespace NLogPerformance
                     {
                         producers[producerIndex] = Task.Factory.StartNew(producer, producerIndex, TaskCreationOptions.LongRunning);
                     }
+
+                    missingMessages(null);
 
                     // Wait for producing complete.
                     Task.WaitAll(producers);
