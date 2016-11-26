@@ -1,3 +1,6 @@
+Tester1\bin\Release\PerformanceTest 1000000 false  >> performance-log.log
+Tester1\bin\Release\PerformanceTest 1000000 false  >> performance-log.log
+Tester1\bin\Release\PerformanceTest 1000000 false  >> performance-log.log
 NLogPerformance\bin\Release\NLogPerformance.exe 3000000 1  8  1 false >> performance-log.log
 NLogPerformance\bin\Release\NLogPerformance.exe 3000000 1  16 1 false >> performance-log.log
 NLogPerformance\bin\Release\NLogPerformance.exe 3000000 1  32 1 false >> performance-log.log

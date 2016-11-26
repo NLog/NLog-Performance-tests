@@ -86,6 +86,7 @@ namespace NLogPerformance
             // Show report message.
             Console.WriteLine("Written {0} values. Memory Usage={1:G3} MBytes", _messageCount, (double)GC.GetTotalMemory(false) / 1024.0 / 1024.0);
             var throughput = actualMessageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
+            Console.WriteLine("");
             Console.WriteLine("| Test Name  | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Mem (MB) |");
             Console.WriteLine("|------------|-----------|-----------|-----|-----|-----|----------|----------|");
             Console.WriteLine(
@@ -97,6 +98,8 @@ namespace NLogPerformance
                 GC.CollectionCount(0) - gc0count,
                 (int)(cpuTimeAfter - cpuTimeBefore).TotalMilliseconds,
                 peakMemory / 1024.0 / 1024.0));
+
+            Console.WriteLine("");
 
             if (stopWatch.ElapsedMilliseconds < 5000)
                 Console.WriteLine("!!! Test completed too quickly, to give useful numbers !!!");

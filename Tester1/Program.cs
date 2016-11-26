@@ -12,7 +12,24 @@ namespace PerformanceTest
     {
         static void Main(string[] args)
         {
+            var waitForUserInteraction = true;
             var count = 1000000;
+            var usage = "Usage: PerformanceTest.exe [MessageCount]  [WaitForUserInteraction (true/false)]";
+
+            if ((args.Length > 0) && (!int.TryParse(args[0], out count)) || (count < 1))
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException("Invalid first argument! Message-count as first application argument.");
+            }
+
+            if (args.Length > 1 && !(bool.TryParse(args[1], out waitForUserInteraction)))
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException("Invalid argument! waitForUserInteraction - true or false.");
+            }
+
+
+           
 
             //gdc test (now disabled)
             string jobId = System.Guid.NewGuid().ToString();
@@ -32,7 +49,10 @@ namespace PerformanceTest
 
             Console.WriteLine("{2:N} messages. Time taken: {0:N}ms. {1:N} / sec", sw.Elapsed.TotalMilliseconds,
                 ((double)count / sw.Elapsed.TotalMilliseconds) * 1000, count);
-            Console.ReadKey();
+            if (waitForUserInteraction)
+            {
+                Console.ReadKey();
+            }
         }
 
         private static void WriteMessages(Logger logger, int count)
