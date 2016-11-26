@@ -37,12 +37,6 @@ namespace NLogPerformance
                 Console.WriteLine(usage);
                 throw new ArgumentException("Invalid fourth argument! Logger-count as fourth application argument.");
             }
-            var waitForUserInteraction = true;
-            if (args.Length > 4 && !(bool.TryParse(args[4], out waitForUserInteraction)))
-            {
-                Console.WriteLine(usage);
-                throw new ArgumentException("Invalid 5th argument! waitForUserInteraction - true or false.");
-            }
 
             Console.WriteLine("Start test with:");
             Console.WriteLine(" - {0} Messages (Size={1})", _messageCount, _messageSize);
@@ -126,7 +120,7 @@ namespace NLogPerformance
                     if (loggerCount > 1)
                     {
                         for (int i = 0; i < loggerArray.Length; ++i)
-                            loggerArray[i] = LogManager.GetLogger(string.Format("Logger-{0}-{1}", System.Threading.Thread.CurrentThread.ManagedThreadId, i), NLog.Common.PoolSetup.Active);
+                            loggerArray[i] = LogManager.GetLogger(string.Format("Logger-{0}-{1}", System.Threading.Thread.CurrentThread.ManagedThreadId, i));
                     }
 
                     for (var i = 0; i < countPerThread; i++)
