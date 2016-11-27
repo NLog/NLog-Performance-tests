@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using NLog;
 
@@ -9,6 +8,7 @@ namespace NLogPerformance
 {
     static class Program
     {
+        private static string _loggerName = "Logger";
         private static int _messageCount = 10000000;
         private static int _threadCount = 1;
         private static int _messageSize = 16;
@@ -16,29 +16,44 @@ namespace NLogPerformance
 
         static void Main(string[] args)
         {
-            var usage = "Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]";
-            if ((args.Length > 0) && (!int.TryParse(args[0], out _messageCount)) || (_messageCount < 1))
+            var usage = "Usage: LoggingPerformance.exe [LoggerName] [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]";
+            if ((args.Length > 0))
             {
-                Console.WriteLine(usage);
-                throw new ArgumentException("Invalid first argument! Message-count as first application argument.");
-            }
-            if ((args.Length > 1) && (!int.TryParse(args[1], out _threadCount)) || (_threadCount < 1))
-            {
-                Console.WriteLine(usage);
-                throw new ArgumentException("Invalid second argument! Thread-count as second application argument.");
-            }
-            if ((args.Length > 2) && (!int.TryParse(args[2], out _messageSize)) || (_messageSize < 1))
-            {
-                Console.WriteLine(usage);
-                throw new ArgumentException("Invalid third argument! Message-size as third application argument.");
-            }
-            if ((args.Length > 3) && (!int.TryParse(args[3], out _loggerCount)) || (_loggerCount < 1))
-            {
-                Console.WriteLine(usage);
-                throw new ArgumentException("Invalid fourth argument! Logger-count as fourth application argument.");
+                if (string.IsNullOrEmpty(args[0]))
+                {
+                    Console.WriteLine(usage);
+                    throw new ArgumentException("Invalid first argument! Logger-name as first application argument.");
+                }
+                _loggerName = args[0];
             }
 
-            var logger = LogManager.GetLogger("logger");
+            if ((args.Length > 1) && (!int.TryParse(args[1], out _messageCount)) || (_messageCount < 1))
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException("Invalid second argument! Message-count as second application argument.");
+            }
+            if ((args.Length > 2) && (!int.TryParse(args[2], out _threadCount)) || (_threadCount < 1))
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException("Invalid third argument! Thread-count as third application argument.");
+            }
+            if ((args.Length > 3) && (!int.TryParse(args[3], out _messageSize)) || (_messageSize < 1))
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException("Invalid fourth argument! Message-size as fourth application argument.");
+            }
+            if ((args.Length > 4) && (!int.TryParse(args[4], out _loggerCount)) || (_loggerCount < 1))
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException("Invalid fifth argument! Logger-count as fifth application argument.");
+            }
+
+            var logger = LogManager.GetLogger(_loggerName);
+            if (!logger.IsInfoEnabled)
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException(string.Format("Logger Name {0} doesn't match any logging rules", _loggerName));
+            }
 
             StringBuilder sb = new StringBuilder(_messageSize);
             for (int i = 0; i < _messageSize; ++i)
@@ -51,13 +66,13 @@ namespace NLogPerformance
             var currentProcess = Process.GetCurrentProcess();
 
             GC.Collect(2, GCCollectionMode.Forced, true);
-            Thread.Sleep(2000); // Allow .NET runtime to do its background thing, before we start
+            System.Threading.Thread.Sleep(2000); // Allow .NET runtime to do its background thing, before we start
 
             Console.WriteLine("Executing performance test...");
             Console.WriteLine("");
-            Console.WriteLine("| Messages   | Size | Threads | Loggers |");
-            Console.WriteLine("|------------|------|---------|---------|");
-            Console.WriteLine("| {0,10} | {1,4} | {2,7} | {3,7} |", _messageCount, _messageSize, _threadCount, _loggerCount);
+            Console.WriteLine("| Logger Name      | Messages   | Size | Threads | Loggers |");
+            Console.WriteLine("|------------------|------------|------|---------|---------|");
+            Console.WriteLine("| {0,-16} | {1,10:N0} | {2,4} | {3,7} | {4,7} |", _loggerName, _messageCount, _messageSize, _threadCount, _loggerCount);
             Console.WriteLine("");
 
             int gc2count = GC.CollectionCount(2);
@@ -123,7 +138,13 @@ namespace NLogPerformance
                     if (loggerCount > 1)
                     {
                         for (int i = 0; i < loggerArray.Length; ++i)
-                            loggerArray[i] = LogManager.GetLogger(string.Format("Logger-{0}-{1}", System.Threading.Thread.CurrentThread.ManagedThreadId, i));
+                        {
+                            loggerArray[i] = LogManager.GetLogger(string.Format("{0}-{1}-{2}", logger.Name, System.Threading.Thread.CurrentThread.ManagedThreadId, i));
+                            if (!loggerArray[i].IsInfoEnabled)
+                            {
+                                throw new ArgumentException(string.Format("Logger Name {0} doesn't match any logging rules", loggerArray[i].Name));
+                            }
+                        }
                     }
 
                     for (var i = 0; i < countPerThread; i++)
