@@ -82,7 +82,7 @@ namespace NLogPerformance
             Console.WriteLine("| Test Name  | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Mem (MB) |");
             Console.WriteLine("|------------|-----------|-----------|-----|-----|-----|----------|----------|");
             Console.WriteLine(
-                string.Format("| My Test    | {0,9} | {1,9} | {2,3} | {3,3} | {4,3} | {5,8} | {6,8:G3} |",
+                string.Format("| My Test    | {0,9:N0} | {1,9:N0} | {2,3} | {3,3} | {4,3} | {5,8:N0} | {6,8:N3} |",
                 stopWatch.ElapsedMilliseconds,
                 (long)throughput,
                 GC.CollectionCount(2) - gc2count,
