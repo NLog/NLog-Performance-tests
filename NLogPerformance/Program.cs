@@ -13,7 +13,7 @@ namespace NLogPerformance
         private static int _threadCount = 1;
         private static int _messageSize = 16;
         private static int _loggerCount = 1;
-        
+
         static void Main(string[] args)
         {
             var usage = "Usage: LoggingPerformance.exe [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]";
@@ -38,12 +38,6 @@ namespace NLogPerformance
                 throw new ArgumentException("Invalid fourth argument! Logger-count as fourth application argument.");
             }
 
-            Console.WriteLine("Start test with:");
-            Console.WriteLine(" - {0} Messages (Size={1})", _messageCount, _messageSize);
-            Console.WriteLine(" - {0} Threads", _threadCount);
-            Console.WriteLine(" - {0} Loggers", _loggerCount);
-            Console.WriteLine("");
-
             var logger = LogManager.GetLogger("logger");
 
             StringBuilder sb = new StringBuilder(_messageSize);
@@ -58,11 +52,18 @@ namespace NLogPerformance
 
             GC.Collect(2, GCCollectionMode.Forced, true);
             Thread.Sleep(2000); // Allow .NET runtime to do its background thing, before we start
+
+            Console.WriteLine("Executing performance test...");
+            Console.WriteLine("");
+            Console.WriteLine("| Messages   | Size | Threads | Loggers |");
+            Console.WriteLine("|------------|------|---------|---------|");
+            Console.WriteLine("| {0,10} | {1,4} | {2,7} | {3,7} |", _messageCount, _messageSize, _threadCount, _loggerCount);
+            Console.WriteLine("");
+
             int gc2count = GC.CollectionCount(2);
             int gc1count = GC.CollectionCount(1);
             int gc0count = GC.CollectionCount(0);
 
-            Console.WriteLine("Executing performance test...");
             Stopwatch stopWatch = new Stopwatch();
             stopWatch.Start();
 
@@ -76,7 +77,6 @@ namespace NLogPerformance
             long peakMemory = currentProcess.PeakWorkingSet64;
 
             // Show report message.
-            Console.WriteLine("Written {0:N0} values. Memory Usage={1:N3} MBytes", _messageCount, (double)GC.GetTotalMemory(false) / 1024.0 / 1024.0);
             var throughput = _messageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
             Console.WriteLine("");
             Console.WriteLine("| Test Name  | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Mem (MB) |");
@@ -119,7 +119,7 @@ namespace NLogPerformance
 
                 Action<object> producer = state =>
                 {
-                    Logger[] loggerArray = loggerCount <= 1 ? new Logger[] { logger } : new Logger[Math.Max(loggerPerThread,1)];
+                    Logger[] loggerArray = loggerCount <= 1 ? new Logger[] { logger } : new Logger[Math.Max(loggerPerThread, 1)];
                     if (loggerCount > 1)
                     {
                         for (int i = 0; i < loggerArray.Length; ++i)
