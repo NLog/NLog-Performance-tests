@@ -60,10 +60,14 @@ namespace NLogPerformance
                 sb.Append('X');
             string logMessage = sb.ToString();
 
-            Console.WriteLine("Executing warmup run...");
+            Console.WriteLine(string.Format("Executing warmup run... (.NET={0}, Platform={1}bit)", FileVersionInfo.GetVersionInfo(typeof(int).Assembly.Location).ProductVersion, IntPtr.Size * 8));
             RunTest(logger, logMessage, 1, 100000, 1);  // Warmup run
 
             var currentProcess = Process.GetCurrentProcess();
+            if (_threadCount <= 1)
+                currentProcess.PriorityClass = ProcessPriorityClass.High;
+            else
+                currentProcess.PriorityClass = ProcessPriorityClass.AboveNormal;
 
             GC.Collect(2, GCCollectionMode.Forced, true);
             System.Threading.Thread.Sleep(2000); // Allow .NET runtime to do its background thing, before we start
