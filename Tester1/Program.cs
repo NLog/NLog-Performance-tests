@@ -30,8 +30,8 @@ namespace PerformanceTest
             Console.WriteLine("start test with {0:N0} messages", count);
 
             Stopwatch sw = Stopwatch.StartNew();
-            var paralllel = 1;
-            for (var i = 0; i < paralllel; i++)
+            var parallel = 1;
+            for (var i = 0; i < parallel; i++)
             {
                 WriteMessages(logger, count);
             }
@@ -39,7 +39,7 @@ namespace PerformanceTest
 
             Console.WriteLine("{2:N} messages. Time taken: {0:N}ms. {1:N} / sec", sw.Elapsed.TotalMilliseconds,
                 ((double)count / sw.Elapsed.TotalMilliseconds) * 1000, count);
-            if (args == null || args.Length == 0)
+            if (args.Length == 0)
             {
                 Console.ReadKey();
             }
