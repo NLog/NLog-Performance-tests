@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,11 +13,12 @@ namespace NLogPerformance
         private static int _messageCount = 10000000;
         private static int _threadCount = 1;
         private static int _messageSize = 16;
+        private static int _messageArgCount = 0;
         private static int _loggerCount = 1;
 
         static void Main(string[] args)
         {
-            var usage = "Usage: LoggingPerformance.exe [LoggerName] [MessageCount] [ThreadCount] [MessageSize] [LoggerCount]";
+            var usage = "Usage: LoggingPerformance.exe [LoggerName] [MessageCount] [ThreadCount] [MessageSize] [LoggerCount] [MessageArgCount]";
             if ((args.Length > 0))
             {
                 if (string.IsNullOrEmpty(args[0]))
@@ -47,6 +49,11 @@ namespace NLogPerformance
                 Console.WriteLine(usage);
                 throw new ArgumentException("Invalid fifth argument! Logger-count as fifth application argument.");
             }
+            if ((args.Length > 5) && (!int.TryParse(args[5], out _messageArgCount)) || (_messageArgCount > 100))
+            {
+                Console.WriteLine(usage);
+                throw new ArgumentException("Invalid sixth argument! Message-Argument-Count as sixth application argument.");
+            }
 
             var logger = LogManager.GetLogger(_loggerName);
             if (!logger.IsInfoEnabled)
@@ -54,14 +61,74 @@ namespace NLogPerformance
                 Console.WriteLine(usage);
                 throw new ArgumentException(string.Format("Logger Name {0} doesn't match any logging rules", _loggerName));
             }
+            List<Logger> loggers = new List<Logger>();
+            loggers.Add(logger);
+            for (int i = 1; i < _loggerCount; ++i)
+            {
+                logger = LogManager.GetLogger(string.Format("{0}-{1}", logger.Name, i));
+                if (!logger.IsInfoEnabled)
+                {
+                    Console.WriteLine(usage);
+                    throw new ArgumentException(string.Format("Logger Name {0} doesn't match any logging rules", logger.Name));
+                }
+                loggers.Add(logger);
+            }
 
-            StringBuilder sb = new StringBuilder(_messageSize);
-            for (int i = 0; i < _messageSize; ++i)
-                sb.Append('X');
-            string logMessage = sb.ToString();
+            List<string> logMessages = new List<string>();
+            List<object> messageArgList = new List<object>();
+            if (_messageArgCount > 0)
+            {
+                StringBuilder sb = new StringBuilder(_messageSize);
+                int argInterval = _messageSize / _messageArgCount;
+
+                for (int i = 0; i < 2000; ++i)
+                {
+                    int paramNumber = 0;
+                    for (int j = 0; j < _messageSize; ++j)
+                    {
+                        if ((j + i) % argInterval == 0 && paramNumber < _messageArgCount)
+                        {
+                            sb.Append("{");
+                            sb.Append(paramNumber.ToString());
+                            //for (int k = 0; k < 25; ++k)
+                            //    sb.Append((char)('A' + ((j + i + 1) / argInterval)));
+                            sb.Append("}");
+                            if (logMessages.Count == 0)
+                                messageArgList.Add(new string(new[] { (char)('A' + paramNumber) }));
+                            ++paramNumber;
+                        }
+                        else
+                        {
+                            sb.Append('X');
+                        }
+                    }
+                    logMessages.Add(sb.ToString());
+                    sb.Length = 0;
+                }
+            }
+            else
+            {
+                StringBuilder sb = new StringBuilder(_messageSize);
+                for (int i = 0; i < _messageSize; ++i)
+                    sb.Append('X');
+                logMessages.Add(sb.ToString());
+            }
+
+            var messageStrings = logMessages.ToArray();
+            var messageArgs = messageArgList.Count == 0 ? null : messageArgList.ToArray();
+
+            Action<int, int, string, object[]> nlogAction = (loggerIndex, level, msg, param) =>
+            {
+                NLogAction(loggers[loggerIndex], level, msg, param);
+            };
+
+            Action<int> nLogThread = (messageCount) =>
+            {
+                RunThreadTest(nlogAction, messageStrings, messageArgs, messageCount, loggers.Count);
+            };
 
             Console.WriteLine(string.Format("Executing warmup run... (.NET={0}, Platform={1}bit)", FileVersionInfo.GetVersionInfo(typeof(int).Assembly.Location).ProductVersion, IntPtr.Size * 8));
-            RunTest(logger, logMessage, 1, 100000, 1);  // Warmup run
+            RunTest(() => { nLogThread(100000); }, 1);  // Warmup run
 
             var currentProcess = Process.GetCurrentProcess();
             if (_threadCount <= 1)
@@ -74,9 +141,9 @@ namespace NLogPerformance
 
             Console.WriteLine("Executing performance test...");
             Console.WriteLine("");
-            Console.WriteLine("| Logger Name      | Messages   | Size | Threads | Loggers |");
-            Console.WriteLine("|------------------|------------|------|---------|---------|");
-            Console.WriteLine("| {0,-16} | {1,10:N0} | {2,4} | {3,7} | {4,7} |", _loggerName, _messageCount, _messageSize, _threadCount, _loggerCount);
+            Console.WriteLine("| Logger Name      | Messages   | Size | Args | Threads | Loggers |");
+            Console.WriteLine("|------------------|------------|------|------|---------|---------|");
+            Console.WriteLine("| {0,-16} | {1,10:N0} | {2,4} | {3,4} | {4,7} | {5,7} |", _loggerName, _messageCount, _messageSize, _messageArgCount, _threadCount, _loggerCount);
             Console.WriteLine("");
 
             int gc2count = GC.CollectionCount(2);
@@ -88,7 +155,9 @@ namespace NLogPerformance
 
             TimeSpan cpuTimeBefore = currentProcess.TotalProcessorTime;
 
-            RunTest(logger, logMessage, _threadCount, _messageCount, _loggerCount);  // Real performance run
+            int countPerThread = (int)((_messageCount - 1) / (double)_threadCount);
+            int actualMessageCount = countPerThread * _threadCount;
+            RunTest(() => { nLogThread(countPerThread); }, _threadCount);  // Real performance run
 
             stopWatch.Stop();
 
@@ -96,7 +165,7 @@ namespace NLogPerformance
             long peakMemory = currentProcess.PeakWorkingSet64;
 
             // Show report message.
-            var throughput = _messageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
+            var throughput = actualMessageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
             Console.WriteLine("");
             Console.WriteLine("| Test Name  | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Mem (MB) |");
             Console.WriteLine("|------------|-----------|-----------|-----|-----|-----|----------|----------|");
@@ -128,47 +197,46 @@ namespace NLogPerformance
             }
         }
 
-        private static void RunTest(Logger logger, string logMessage, int threadCount, int messageCount, int loggerCount)
+        private static void NLogAction(NLog.Logger logger, int level, string messageTemplate, object[] args)
+        {
+            logger.Log(NLog.LogLevel.FromOrdinal(level), messageTemplate, args);
+        }
+
+        private static void RunThreadTest(Action<int, int, string, object[]> logAction, string[] logMessages, object[] args, int messageCount, int loggerCount)
+        {
+            Random seed = new Random((int)DateTime.UtcNow.Ticks);
+            if (logMessages.Length > 1)
+            {
+                for (int i = 0; i < messageCount; ++i)
+                {
+                    var logIndex = seed.Next(logMessages.Length);
+                    var logLevel = seed.Next(5 + 1);
+                    var loggerIndex = loggerCount > 1 ? seed.Next(loggerCount) : 0;
+                    logAction(loggerIndex, logLevel, logMessages[logIndex], args);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < messageCount; ++i)
+                {
+                    var loggerIndex = loggerCount > 1 ? seed.Next(loggerCount) : 0;
+                    logAction(loggerIndex, 3, logMessages[0], args);
+                }
+            }
+        }
+
+        private static void RunTest(Action threadAction, int threadCount)
         {
             try
             {
-                int loggerPerThread = Math.Max(loggerCount / threadCount, 1);
-                int countPerThread = messageCount - 1 / threadCount / loggerPerThread;
-                int actualMessageCount = countPerThread * threadCount * loggerPerThread;
-
                 Action<object> producer = state =>
                 {
-                    Logger[] loggerArray = loggerCount <= 1 ? new Logger[] { logger } : new Logger[Math.Max(loggerPerThread, 1)];
-                    if (loggerCount > 1)
-                    {
-                        for (int i = 0; i < loggerArray.Length; ++i)
-                        {
-                            loggerArray[i] = LogManager.GetLogger(string.Format("{0}-{1}-{2}", logger.Name, System.Threading.Thread.CurrentThread.ManagedThreadId, i));
-                            if (!loggerArray[i].IsInfoEnabled)
-                            {
-                                throw new ArgumentException(string.Format("Logger Name {0} doesn't match any logging rules", loggerArray[i].Name));
-                            }
-                        }
-                    }
-
-                    for (var i = 0; i < countPerThread; i++)
-                    {
-                        for (int j = 0; j < loggerArray.Length; ++j)
-                            loggerArray[j].Info(logMessage);
-                    }
-                };
-
-                Action<object> missingMessages = state =>
-                {
-                    for (int i = 0; i < messageCount - actualMessageCount; ++i)
-                        logger.Info(logMessage);
+                    threadAction();
                 };
 
                 if (threadCount <= 1)
                 {
                     producer(null); // Do the testing without spinning up tasks
-                    if (actualMessageCount != messageCount)
-                        missingMessages(null);
                 }
                 else
                 {
@@ -179,11 +247,10 @@ namespace NLogPerformance
                         producers[producerIndex] = Task.Factory.StartNew(producer, producerIndex, TaskCreationOptions.LongRunning);
                     }
 
-                    missingMessages(null);
-
                     // Wait for producing complete.
                     Task.WaitAll(producers);
                 }
+
                 LogManager.Flush();
             }
             catch (Exception ex)
