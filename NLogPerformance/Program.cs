@@ -137,6 +137,9 @@ namespace NLogPerformance
                 currentProcess.PriorityClass = ProcessPriorityClass.AboveNormal;
 
             GC.Collect(2, GCCollectionMode.Forced, true);
+
+            AppDomain.MonitoringIsEnabled = true;
+
             System.Threading.Thread.Sleep(2000); // Allow .NET runtime to do its background thing, before we start
 
             Console.WriteLine("Executing performance test...");
@@ -149,6 +152,7 @@ namespace NLogPerformance
             int gc2count = GC.CollectionCount(2);
             int gc1count = GC.CollectionCount(1);
             int gc0count = GC.CollectionCount(0);
+            long allocatedBytes = AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize;
 
             Stopwatch stopWatch = new Stopwatch();
             stopWatch.Start();
@@ -162,22 +166,22 @@ namespace NLogPerformance
             stopWatch.Stop();
 
             TimeSpan cpuTimeAfter = currentProcess.TotalProcessorTime;
-            long peakMemory = currentProcess.PeakWorkingSet64;
+            long deltaAllocatedBytes = AppDomain.CurrentDomain.MonitoringTotalAllocatedMemorySize - allocatedBytes;
 
             // Show report message.
             var throughput = actualMessageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
             Console.WriteLine("");
-            Console.WriteLine("| Test Name  | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Mem (MB) |");
-            Console.WriteLine("|------------|-----------|-----------|-----|-----|-----|----------|----------|");
+            Console.WriteLine("| Test Name  | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Alloc (MB) |");
+            Console.WriteLine("|------------|-----------|-----------|-----|-----|-----|----------|------------|");
             Console.WriteLine(
-                string.Format("| My Test    | {0,9:N0} | {1,9:N0} | {2,3} | {3,3} | {4,3} | {5,8:N0} | {6,8:N3} |",
+                string.Format("| My Test    | {0,9:N0} | {1,9:N0} | {2,3} | {3,3} | {4,3} | {5,8:N0} | {6,10:N1} |",
                 stopWatch.ElapsedMilliseconds,
                 (long)throughput,
                 GC.CollectionCount(2) - gc2count,
                 GC.CollectionCount(1) - gc1count,
                 GC.CollectionCount(0) - gc0count,
                 (int)(cpuTimeAfter - cpuTimeBefore).TotalMilliseconds,
-                peakMemory / 1024.0 / 1024.0));
+                deltaAllocatedBytes / 1024.0 / 1024.0));
 
             Console.WriteLine("");
 
