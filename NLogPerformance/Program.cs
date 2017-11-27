@@ -90,8 +90,8 @@ namespace NLogPerformance
                         {
                             sb.Append("{");
                             sb.Append(paramNumber.ToString());
-                            //for (int k = 0; k < 25; ++k)
-                            //    sb.Append((char)('A' + ((j + i + 1) / argInterval)));
+                            //for (int k = 0; k < 24; ++k)
+                            //    sb.Append((char)('A' + paramNumber + i % 25));
                             sb.Append("}");
                             if (logMessages.Count == 0)
                                 messageArgList.Add(new string(new[] { (char)('A' + paramNumber) }));
