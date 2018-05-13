@@ -2,9 +2,13 @@ NLogPerformance\bin\Release\NLogPerformance.exe PerfLogger 15000000 1  16 1 0 >>
 del c:\temp\log\*.* /S /q
 NLogPerformance\bin\Release\NLogPerformance.exe PerfLogger 15000000 1  128 1 2 >> performance-log.log
 del c:\temp\log\*.* /S /q
+NLogPerformance\bin\Release\NLogPerformance.exe PerfLogger 15000000 1  128 1 6 >> performance-log.log
+del c:\temp\log\*.* /S /q
 NLogPerformance\bin\Release\NLogPerformance.exe PerfSyncLogger 10000000 1  16 1 0 >> performance-log.log
 del c:\temp\log\*.* /S /q
 NLogPerformance\bin\Release\NLogPerformance.exe PerfSyncLogger 10000000 1  128 1 2 >> performance-log.log
+del c:\temp\log\*.* /S /q
+NLogPerformance\bin\Release\NLogPerformance.exe PerfSyncLogger 10000000 1  128 1 6 >> performance-log.log
 del c:\temp\log\*.* /S /q
 NLogPerformance\bin\Release\NLogPerformance.exe Logger 10000000 1  16 1 0 >> performance-log.log
 del c:\temp\log\*.* /S /q
