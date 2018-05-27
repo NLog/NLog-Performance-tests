@@ -81,7 +81,7 @@ namespace NLogPerformance
                 StringBuilder sb = new StringBuilder(_messageSize);
                 int argInterval = _messageSize / _messageArgCount;
 
-                for (int i = 0; i < 2000; ++i)
+                for (int i = 0; i < 200; ++i)
                 {
                     int paramNumber = 0;
                     for (int j = 0; j < _messageSize; ++j)
@@ -90,8 +90,8 @@ namespace NLogPerformance
                         {
                             sb.Append("{");
                             sb.Append(paramNumber.ToString());
-                            //for (int k = 0; k < 24; ++k)
-                            //    sb.Append((char)('A' + paramNumber + i % 25));
+                            //for (int k = 0; k < 24 - paramNumber; ++k)
+                            //    sb.Append((char)('A' + paramNumber + k));
                             sb.Append("}");
                             if (logMessages.Count == 0)
                                 messageArgList.Add(new string(new[] { (char)('A' + paramNumber) }));
