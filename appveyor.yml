@@ -1,7 +1,9 @@
 version: 1.0.{build}
+image: Visual Studio 2017
 configuration: Release
 before_build:
 - cmd: git submodule update --init --recursive
+- cmd: msbuild /t:restore PerformanceTest.sln
 build:
   project: PerformanceTest.sln
   verbosity: minimal
