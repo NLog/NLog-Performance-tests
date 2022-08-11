@@ -34,7 +34,7 @@ namespace BenchmarkTool
                     //else if (i == 2)
                     //    _messageArgs[i] = StringComparison.InvariantCulture;
                     //else if (i == 3)
-                    //    _messageArgs[i] = new { Id = 123, Name = "Tester", Age = 21, Gender = StringComparison.InvariantCulture };
+                    //    _messageArgs[i] = new { Id = 123, Name = "Tester", Age = 21, Culture = StringComparison.InvariantCulture };
                     else
                         _messageArgs[i] = i;
                 }
