@@ -11,7 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{CA9A0B
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NLogPerformance", "NLogPerformance\NLogPerformance.csproj", "{1788E4A4-1DFC-46D1-BC1E-B69E8F2D76B9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NLogPerformance", "NLogPerformance\NLogPerformance.csproj", "{1788E4A4-1DFC-46D1-BC1E-B69E8F2D76B9}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManyThreadsTester", "ManyThreadsTester\ManyThreadsTester\ManyThreadsTester.csproj", "{E4AF9AB1-C7B2-40EB-B38F-2D173F8A5E31}"
 EndProject
@@ -21,10 +21,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibLogPerformance", "LibLog
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MicrosofLoggingPerformance", "MicrosofLoggingPerformance\MicrosofLoggingPerformance.csproj", "{3C7801DB-DFD6-41D9-A9AF-351435BDF520}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{FDE927D0-1A98-499F-B097-19351790322F}"
+	ProjectSection(SolutionItems) = preProject
+		appveyor.yml = appveyor.yml
+	EndProjectSection
+EndProject
 Global
-	GlobalSection(Performance) = preSolution
-		HasPerformanceSessions = true
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -60,6 +62,9 @@ Global
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {C287B5FC-362B-46EE-8335-6C4FA275720C}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 	GlobalSection(Performance) = preSolution
 		HasPerformanceSessions = true
