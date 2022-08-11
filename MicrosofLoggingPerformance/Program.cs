@@ -4,18 +4,18 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using NLog.Extensions.Logging;
 
-namespace LibLogPerformance
+namespace MicrosofLoggingPerformance
 {
     class Program
     {
         static void Main(string[] args)
         {
             bool asyncLogging = true;
-            bool useMessageTemplate = false;
+            bool useMessageTemplate = true;
             int threadCount = 4;
-            int messageCount = asyncLogging ? 5000000 : 2000000;
-            int messageSize = 128;
-            int messageArgCount = 3;
+            int messageCount = asyncLogging ? 5000000 : 5000000;
+            int messageSize = 30;
+            int messageArgCount = 2;
 
             var fileTarget = new NLog.Targets.FileTarget
             {
@@ -38,13 +38,13 @@ namespace LibLogPerformance
             if (!asyncLogging)
             {
                 var nlogConfig = new NLog.Config.LoggingConfiguration();
-                nlogConfig.AddRuleForAllLevels(fileTarget);
+                nlogConfig.AddRule(NLog.LogLevel.Debug, NLog.LogLevel.Fatal, fileTarget);
                 NLog.LogManager.Configuration = nlogConfig;
             }
             else
             {
                 var nlogConfig = new NLog.Config.LoggingConfiguration();
-                nlogConfig.AddRuleForAllLevels(asyncFileTarget);
+                nlogConfig.AddRule(NLog.LogLevel.Debug, NLog.LogLevel.Fatal, asyncFileTarget);
                 NLog.LogManager.Configuration = nlogConfig;
             }
 
@@ -82,12 +82,14 @@ namespace LibLogPerformance
             if (!asyncLogging)
             {
                 var serilogConfig = new LoggerConfiguration()
+                    .MinimumLevel.Debug()
                     .WriteTo.File(@"C:\Temp\MicrosoftPerformance\Serilog.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000));
                 Log.Logger = serilogConfig.CreateLogger();
             }
             else
             {
                 var serilogConfig = new LoggerConfiguration()
+                    .MinimumLevel.Debug()
                     .WriteTo.Async(a => a.File(@"C:\Temp\MicrosoftPerformance\SerilogAsync.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000)), blockWhenFull: true);
                 Log.Logger = serilogConfig.CreateLogger();
             }
@@ -148,6 +150,15 @@ namespace LibLogPerformance
 
         private static Action<string, object[]> LoggerMessageDefineTwoArg(ILogger<Program> logger, string messageTemplate)
         {
+            //var scopeProperties = new[] { new System.Collections.Generic.KeyValuePair<string, object>("Planet", "Earth"), new System.Collections.Generic.KeyValuePair<string, object>("Galaxy", "Milkyway") };
+            //var loggerTemplate = LoggerMessage.Define<object, object>(LogLevel.Trace, default(EventId), messageTemplate);
+            //Action<string, object[]> nlogMethod = (messageFormat, messageArgs) =>
+            //{
+            //    using (logger.BeginScope(scopeProperties))
+            //        loggerTemplate(logger, messageArgs[0], messageArgs[1], null);
+            //};
+            //return nlogMethod;
+
             var loggerTemplate = LoggerMessage.Define<object, object>(LogLevel.Information, default(EventId), messageTemplate);
             Action<string, object[]> nlogMethod = (messageFormat, messageArgs) =>
             {

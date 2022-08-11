@@ -4,10 +4,10 @@ namespace NLogPerformance
 {
     static class Program
     {
-        private static string _loggerName = "Logger";
+        private static string _loggerName = "SimpleLogger";
         private static int _messageCount = 10000000;
         private static int _threadCount = 1;
-        private static int _messageSize = 16;
+        private static int _messageSize = 30;
         private static int _messageArgCount = 0;
 
         static void Main(string[] args)
@@ -58,7 +58,6 @@ namespace NLogPerformance
             {
                 NLog.LogManager.Flush();
             };
-
 
             var benchmarkTool = new BenchmarkTool.BenchMarkExecutor(_messageSize, _messageArgCount, false);
             benchmarkTool.ExecuteTest(_loggerName, _threadCount, _messageCount, logMethod, flushMethod);
