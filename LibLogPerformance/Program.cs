@@ -10,7 +10,7 @@ namespace LibLogPerformance
         {
             bool asyncLogging = false;
             bool useMessageTemplate = false;
-            int threadCount = 8;
+            int threadCount = 1;
             int messageCount = asyncLogging ? 5000000 : 5000000;
             int messageSize = 30;
             int messageArgCount = 2;

@@ -10,9 +10,9 @@ namespace MicrosofLoggingPerformance
     {
         static void Main(string[] args)
         {
-            bool asyncLogging = true;
+            bool asyncLogging = false;
             bool useMessageTemplate = true;
-            int threadCount = 4;
+            int threadCount = 1;
             int messageCount = asyncLogging ? 5000000 : 5000000;
             int messageSize = 30;
             int messageArgCount = 2;
