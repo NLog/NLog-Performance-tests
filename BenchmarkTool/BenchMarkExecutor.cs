@@ -175,6 +175,9 @@ namespace BenchmarkTool
             if (!Stopwatch.IsHighResolution)
                 Console.WriteLine("!!! Stopwatch.IsHighResolution = False !!!");
 
+            if (Environment.Is64BitOperatingSystem && IntPtr.Size != 8)
+                Console.WriteLine("!!! Not running 64 bit !!!");
+
 #if DEBUG
             Console.WriteLine("!!! Using DEBUG build !!!");
 #endif
