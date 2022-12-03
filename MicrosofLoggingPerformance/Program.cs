@@ -1,8 +1,10 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Serilog;
 using NLog.Extensions.Logging;
+using NLog.Layouts;
+using Serilog;
+using Serilog.Formatting;
 
 namespace MicrosofLoggingPerformance
 {
@@ -12,20 +14,37 @@ namespace MicrosofLoggingPerformance
         {
             bool asyncLogging = false;
             bool useMessageTemplate = true;
+            bool jsonLogging = false;
             int threadCount = 1;
             int messageCount = asyncLogging ? 5000000 : 5000000;
             int messageSize = 30;
             int messageArgCount = 2;
 
+            NLog.Time.TimeSource.Current = new NLog.Time.AccurateUtcTimeSource();
+
             var fileTarget = new NLog.Targets.FileTarget
             {
                 Name = "FileTarget",
-                FileName = @"C:\Temp\MicrosoftPerformance\NLog.txt",
+                FileName = System.IO.Path.Combine(@"C:\Temp\MicrosoftPerformance\", asyncLogging ? "NLogAsync.txt" : "NLog.txt"),
                 KeepFileOpen = true,
                 ConcurrentWrites = false,
                 AutoFlush = false,
                 OpenFileFlushTimeout = 1,
             };
+
+            if (jsonLogging)
+            {
+                fileTarget.Layout = new JsonLayout()
+                {
+                    IncludeEventProperties = true,
+                    IncludeScopeProperties = true,
+                    Attributes = { 
+                        new JsonAttribute("@t", "${date:format=o}"),
+                        new JsonAttribute("mt", "${message:raw=true}"),
+                        new JsonAttribute("SourceContext", "${logger}"),
+                    }
+                };
+            }
 
             var asyncFileTarget = new NLog.Targets.Wrappers.AsyncTargetWrapper(fileTarget)
             {
@@ -35,18 +54,17 @@ namespace MicrosofLoggingPerformance
             };
 
             var benchmarkTool = new BenchmarkTool.BenchMarkExecutor(messageSize, messageArgCount, useMessageTemplate);
+
+            var nlogConfig = new NLog.Config.LoggingConfiguration();
             if (!asyncLogging)
             {
-                var nlogConfig = new NLog.Config.LoggingConfiguration();
                 nlogConfig.AddRule(NLog.LogLevel.Debug, NLog.LogLevel.Fatal, fileTarget);
-                NLog.LogManager.Configuration = nlogConfig;
             }
             else
             {
-                var nlogConfig = new NLog.Config.LoggingConfiguration();
                 nlogConfig.AddRule(NLog.LogLevel.Debug, NLog.LogLevel.Fatal, asyncFileTarget);
-                NLog.LogManager.Configuration = nlogConfig;
             }
+            NLog.LogManager.Configuration = nlogConfig;
 
             var nlogProvider = new ServiceCollection().AddLogging(cfg => cfg.AddNLog()).BuildServiceProvider();
             var nLogger = nlogProvider.GetService<ILogger<Program>>();
@@ -62,7 +80,7 @@ namespace MicrosofLoggingPerformance
             }
             else if (messageArgCount == 2)
             {
-                nlogMethod = LoggerMessageDefineTwoArg(nLogger, messageTemplate);
+                nlogMethod = LoggerMessageDefineTwoArg(nLogger, messageTemplate, jsonLogging);
             }
             else if (messageArgCount == 3)
             {
@@ -77,20 +95,26 @@ namespace MicrosofLoggingPerformance
                 NLog.LogManager.Shutdown();
                 nlogProvider.Dispose();
             };
-            benchmarkTool.ExecuteTest(asyncLogging ? "NLog Async" : "NLog", threadCount, messageCount, nlogMethod, nlogFlushMethod);
+            benchmarkTool.ExecuteTest("NLog" + (jsonLogging ? " Json" : "") + (asyncLogging ? " Async" : ""), threadCount, messageCount, nlogMethod, nlogFlushMethod);
+
+            Console.WriteLine();
+
+            ITextFormatter serilogFormatter = jsonLogging ?
+                new Serilog.Formatting.Compact.CompactJsonFormatter() :
+                new Serilog.Formatting.Display.MessageTemplateTextFormatter("{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
+
+            var serilogConfig = new LoggerConfiguration().MinimumLevel.Debug();
+            if (jsonLogging)
+                serilogConfig.Enrich.FromLogContext();
 
             if (!asyncLogging)
             {
-                var serilogConfig = new LoggerConfiguration()
-                    .MinimumLevel.Debug()
-                    .WriteTo.File(@"C:\Temp\MicrosoftPerformance\Serilog.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000));
+                serilogConfig.WriteTo.File(serilogFormatter, @"C:\Temp\MicrosoftPerformance\Serilog.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000));
                 Log.Logger = serilogConfig.CreateLogger();
             }
             else
             {
-                var serilogConfig = new LoggerConfiguration()
-                    .MinimumLevel.Debug()
-                    .WriteTo.Async(a => a.File(@"C:\Temp\MicrosoftPerformance\SerilogAsync.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000)), blockWhenFull: true);
+                serilogConfig.WriteTo.Async(a => a.File(serilogFormatter, @"C:\Temp\MicrosoftPerformance\SerilogAsync.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000)), blockWhenFull: true);
                 Log.Logger = serilogConfig.CreateLogger();
             }
 
@@ -107,7 +131,7 @@ namespace MicrosofLoggingPerformance
             }
             else if (messageArgCount == 2)
             {
-                serilogMethod = LoggerMessageDefineTwoArg(serilogLogger, messageTemplate);
+                serilogMethod = LoggerMessageDefineTwoArg(serilogLogger, messageTemplate, jsonLogging);
             }
             else if (messageArgCount == 3)
             {
@@ -122,7 +146,7 @@ namespace MicrosofLoggingPerformance
                 Log.CloseAndFlush();
                 serilogProvider.Dispose();
             };
-            benchmarkTool.ExecuteTest(asyncLogging ? "Serilog Async" : "Serilog", threadCount, messageCount, serilogMethod, serilogFlushMethod);
+            benchmarkTool.ExecuteTest("Serilog" + (jsonLogging ? " Json" : "") + (asyncLogging ? " Async" : ""), threadCount, messageCount, serilogMethod, serilogFlushMethod);
 
             Console.WriteLine("Press any key to continue...");
             Console.ReadKey();
@@ -148,23 +172,28 @@ namespace MicrosofLoggingPerformance
             return nlogMethod;
         }
 
-        private static Action<string, object[]> LoggerMessageDefineTwoArg(ILogger<Program> logger, string messageTemplate)
+        private static Action<string, object[]> LoggerMessageDefineTwoArg(ILogger<Program> logger, string messageTemplate, bool scopeLogging)
         {
-            //var scopeProperties = new[] { new System.Collections.Generic.KeyValuePair<string, object>("Planet", "Earth"), new System.Collections.Generic.KeyValuePair<string, object>("Galaxy", "Milkyway") };
-            //var loggerTemplate = LoggerMessage.Define<object, object>(LogLevel.Trace, default(EventId), messageTemplate);
-            //Action<string, object[]> nlogMethod = (messageFormat, messageArgs) =>
-            //{
-            //    using (logger.BeginScope(scopeProperties))
-            //        loggerTemplate(logger, messageArgs[0], messageArgs[1], null);
-            //};
-            //return nlogMethod;
-
-            var loggerTemplate = LoggerMessage.Define<object, object>(LogLevel.Information, default(EventId), messageTemplate);
-            Action<string, object[]> nlogMethod = (messageFormat, messageArgs) =>
+            if (scopeLogging)
             {
-                loggerTemplate(logger, messageArgs[0], messageArgs[1], null);
-            };
-            return nlogMethod;
+                var scopeProperties = new[] { new System.Collections.Generic.KeyValuePair<string, object>("Planet", "Earth"), new System.Collections.Generic.KeyValuePair<string, object>("Galaxy", "Milkyway") };
+                var loggerTemplate = LoggerMessage.Define<object, object>(LogLevel.Information, default(EventId), messageTemplate);
+                Action<string, object[]> nlogMethod = (messageFormat, messageArgs) =>
+                {
+                    using (logger.BeginScope(scopeProperties))
+                        loggerTemplate(logger, messageArgs[0], messageArgs[1], null);
+                };
+                return nlogMethod;
+            }
+            else
+            {
+                var loggerTemplate = LoggerMessage.Define<object, object>(LogLevel.Information, default(EventId), messageTemplate);
+                Action<string, object[]> nlogMethod = (messageFormat, messageArgs) =>
+                {
+                    loggerTemplate(logger, messageArgs[0], messageArgs[1], null);
+                };
+                return nlogMethod;
+            }
         }
 
         private static Action<string, object[]> LoggerMessageDefineThreeArg(ILogger<Program> logger, string messageTemplate)
