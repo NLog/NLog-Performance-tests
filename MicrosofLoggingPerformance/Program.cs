@@ -38,6 +38,7 @@ namespace MicrosofLoggingPerformance
                 {
                     IncludeEventProperties = true,
                     IncludeScopeProperties = true,
+                    SuppressSpaces = true,
                     Attributes = { 
                         new JsonAttribute("@t", "${date:format=o}"),
                         new JsonAttribute("mt", "${message:raw=true}"),
@@ -101,7 +102,7 @@ namespace MicrosofLoggingPerformance
 
             ITextFormatter serilogFormatter = jsonLogging ?
                 new Serilog.Formatting.Compact.CompactJsonFormatter() :
-                new Serilog.Formatting.Display.MessageTemplateTextFormatter("{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}");
+                new Serilog.Formatting.Display.MessageTemplateTextFormatter("{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}");
 
             var serilogConfig = new LoggerConfiguration().MinimumLevel.Debug();
             if (jsonLogging)
