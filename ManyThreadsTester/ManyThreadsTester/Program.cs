@@ -3,9 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NLog;
@@ -16,7 +13,6 @@ namespace ParallelTask
     class Program
     {
         private static Logger logger = LogManager.GetCurrentClassLogger();
-        private static List<Logger> loggers;
 
         private static BlockingCollection<int> col;
         private const int maxSize = 8000;
@@ -24,6 +20,7 @@ namespace ParallelTask
         private static int processed = 0;
         private static CpuUsage cpu = new CpuUsage();
         private static long logged;
+
         static void TestProducerConsumer(int threadCount, Action<int, int> collectionConsumerAction, int period, int count)
         {
             Interlocked.Exchange(ref logged, 0);
