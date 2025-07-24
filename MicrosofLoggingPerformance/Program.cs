@@ -12,11 +12,11 @@ namespace MicrosofLoggingPerformance
     {
         static void Main(string[] args)
         {
-            bool asyncLogging = false;
+            bool asyncLogging = true;
             bool useMessageTemplate = true;
             bool jsonLogging = false;
-            int threadCount = 1;
-            int messageCount = asyncLogging ? 5000000 : 5000000;
+            int threadCount = 2;
+            int messageCount = jsonLogging ? 5000000 : 10000000;
             int messageSize = 30;
             int messageArgCount = 2;
 
@@ -27,7 +27,6 @@ namespace MicrosofLoggingPerformance
                 Name = "FileTarget",
                 FileName = System.IO.Path.Combine(@"C:\Temp\MicrosoftPerformance\", asyncLogging ? "NLogAsync.txt" : "NLog.txt"),
                 KeepFileOpen = true,
-                ConcurrentWrites = false,
                 AutoFlush = false,
                 OpenFileFlushTimeout = 1,
             };
@@ -110,12 +109,12 @@ namespace MicrosofLoggingPerformance
 
             if (!asyncLogging)
             {
-                serilogConfig.WriteTo.File(serilogFormatter, @"C:\Temp\MicrosoftPerformance\Serilog.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000));
+                serilogConfig.WriteTo.File(serilogFormatter, @"C:\Temp\MicrosoftPerformance\Serilog.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000), fileSizeLimitBytes: null);
                 Log.Logger = serilogConfig.CreateLogger();
             }
             else
             {
-                serilogConfig.WriteTo.Async(a => a.File(serilogFormatter, @"C:\Temp\MicrosoftPerformance\SerilogAsync.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000)), blockWhenFull: true);
+                serilogConfig.WriteTo.Async(a => a.File(serilogFormatter, @"C:\Temp\MicrosoftPerformance\SerilogAsync.txt", buffered: true, flushToDiskInterval: TimeSpan.FromMilliseconds(1000), fileSizeLimitBytes: null), blockWhenFull: true);
                 Log.Logger = serilogConfig.CreateLogger();
             }
 

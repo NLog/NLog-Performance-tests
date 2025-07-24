@@ -20,7 +20,6 @@ namespace LibLogPerformance
                 Name = "FileTarget",
                 FileName = @"C:\Temp\LibLogPerformance\NLog.txt",
                 KeepFileOpen = true,
-                ConcurrentWrites = false,
                 AutoFlush = false,
                 OpenFileFlushTimeout = 1,
             };

@@ -4,8 +4,8 @@ namespace NLogPerformance
 {
     static class Program
     {
-        private static string _loggerName = "SimpleSyncLogger";
-        private static int _messageCount = 5000000;
+        private static string _loggerName = "JsonLogger";
+        private static int _messageCount = 10000000;
         private static int _threadCount = 1;
         private static int _messageSize = 30;
         private static int _messageArgCount = 0;
