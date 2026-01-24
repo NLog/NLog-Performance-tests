@@ -85,22 +85,39 @@ namespace BenchmarkTool
             long threadAllocationTotal = 0;
 #endif
 
+            long totalOverheadTicks = 0;
+            long totalSleepTimeMs = 0;
+
+            int threadModulus = (int)(10000 / (double)threadCount);
+
             Action<object> threadAction = (state) =>
             {
                 int threadMessageCount = (int)state;
 #if NETCOREAPP2_0 || NETCOREAPP2_1 || NETCOREAPP2_2
                 long allocatedBytesForCurrentThread = GC.GetAllocatedBytesForCurrentThread();
 #endif
+                long overheadTicks = 0;
+                long sleepTimeMs = 0;
+
                 for (int i = 0; i < threadMessageCount; i += _messageTemplates.Count)
                 {
+                    var startTime = Stopwatch.GetTimestamp();
                     for (int j = 0; j < _messageTemplates.Count; ++j)
                     {
                         logMethod(_messageTemplates[j], _messageArgs);
+                    }
+                    overheadTicks += (Stopwatch.GetTimestamp() - startTime);
+                    if ((i % threadModulus) == 0)
+                    {
+                        System.Threading.Thread.Sleep(1);  // Allow background threads to keep up (avoid testing buffer overflow performance)
+                        sleepTimeMs += 1;
                     }
                 }
 #if NETCOREAPP2_0 || NETCOREAPP2_1 || NETCOREAPP2_2
                 System.Threading.Interlocked.Add(ref threadAllocationTotal, GC.GetAllocatedBytesForCurrentThread() - allocatedBytesForCurrentThread);
 #endif
+                System.Threading.Interlocked.Add(ref totalOverheadTicks, overheadTicks);
+                System.Threading.Interlocked.Add(ref totalSleepTimeMs, sleepTimeMs);
             };
 
             int warmUpCount = messageCount > 100000 * 2 ? 100000 : messageCount / 10;
@@ -125,6 +142,9 @@ namespace BenchmarkTool
 
             Stopwatch stopWatch = new Stopwatch();
 
+            totalOverheadTicks = 0;
+            totalSleepTimeMs = 0;
+
             int gc2count = GC.CollectionCount(2);
             int gc1count = GC.CollectionCount(1);
             int gc0count = GC.CollectionCount(0);
@@ -146,6 +166,9 @@ namespace BenchmarkTool
 
             stopWatch.Stop();
 
+            var elapsedTime = stopWatch.Elapsed;
+            elapsedTime = elapsedTime.Add(TimeSpan.FromMilliseconds(-totalSleepTimeMs / (double)threadCount));
+
             TimeSpan cpuTimeAfter = currentProcess.TotalProcessorTime;
 #if NETCOREAPP2_0 || NETCOREAPP2_1 || NETCOREAPP2_2
             long deltaAllocatedBytes = threadAllocationTotal;
@@ -154,22 +177,23 @@ namespace BenchmarkTool
 #endif
 
             // Show report message.
-            var throughput = actualMessageCount / ((double)stopWatch.ElapsedTicks / Stopwatch.Frequency);
+            var throughput = actualMessageCount / elapsedTime.TotalSeconds;
             Console.WriteLine("");
-            Console.WriteLine("| Test Name        | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Alloc (MB) |");
-            Console.WriteLine("|------------------|-----------|-----------|-----|-----|-----|----------|------------|");
+            Console.WriteLine("| Test Name        | Time (ms) | Msgs/sec  | GC2 | GC1 | GC0 | CPU (ms) | Overhead | Alloc (MB) |");
+            Console.WriteLine("|------------------|-----------|-----------|-----|-----|-----|----------|----------|------------|");
             Console.WriteLine(
-                string.Format("| {0,-16} | {1,9:N0} | {2,9:N0} | {3,3} | {4,3} | {5,3} | {6,8:N0} | {7,10:N1} |",
+                string.Format("| {0,-16} | {1,9:N0} | {2,9:N0} | {3,3} | {4,3} | {5,3} | {6,8:N0} | {7,8:N0} | {8,10:N1} |",
                 testName,
-                stopWatch.ElapsedMilliseconds,
+                elapsedTime.TotalMilliseconds,
                 (long)throughput,
                 GC.CollectionCount(2) - gc2count,
                 GC.CollectionCount(1) - gc1count,
                 GC.CollectionCount(0) - gc0count,
                 (int)(cpuTimeAfter - cpuTimeBefore).TotalMilliseconds,
+                TimeSpan.FromTicks((long)(totalOverheadTicks * ((double)TimeSpan.TicksPerSecond / Stopwatch.Frequency))).TotalMilliseconds,
                 deltaAllocatedBytes / 1024.0 / 1024.0));
 
-            if (stopWatch.ElapsedMilliseconds < 5000)
+            if (elapsedTime.TotalMilliseconds < 5000)
                 Console.WriteLine("!!! Test completed too quickly, to give useful numbers !!!");
 
             if (!Stopwatch.IsHighResolution)
