@@ -88,7 +88,7 @@ namespace BenchmarkTool
             long totalOverheadTicks = 0;
             long totalSleepTimeMs = 0;
 
-            int threadModulus = (int)(10000 / (double)threadCount);
+            int threadModulus = ((int)(10000.0 / threadCount / _messageTemplates.Count)) * _messageTemplates.Count;
 
             Action<object> threadAction = (state) =>
             {
@@ -109,7 +109,7 @@ namespace BenchmarkTool
                     overheadTicks += (Stopwatch.GetTimestamp() - startTime);
                     if ((i % threadModulus) == 0)
                     {
-                        System.Threading.Thread.Sleep(1);  // Allow background threads to keep up (avoid testing buffer overflow performance)
+                        System.Threading.Thread.Sleep(1);  // Throttle to allow background threads to keep up (avoid testing buffer overflow performance)
                         sleepTimeMs += 1;
                     }
                 }

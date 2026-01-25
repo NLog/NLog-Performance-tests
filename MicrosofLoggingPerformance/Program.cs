@@ -62,9 +62,9 @@ namespace MicrosofLoggingPerformance
                 Action<ZLoggerFileOptions> zLoggerOptions = (opt) =>
                 {
                     opt.FullMode = BackgroundBufferFullMode.Block;
+                    opt.IncludeScopes = true;
                     if (jsonLogging)
                     {
-                        opt.IncludeScopes = true;
                         opt.UseJsonFormatter(fmt =>
                         {
                             fmt.UseUtcTimestamp = true;
@@ -113,7 +113,7 @@ namespace MicrosofLoggingPerformance
                 nlogProvider.Dispose();
             };
             benchmarkTool.ExecuteTest("NLog" + (jsonLogging ? " Json" : "") + (asyncLogging ? " Async" : ""), threadCount, messageCount, nlogMethod, nlogFlushMethod);
-            
+
             Console.WriteLine();
 
             ITextFormatter serilogFormatter = jsonLogging ?
