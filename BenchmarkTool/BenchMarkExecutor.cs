@@ -88,7 +88,7 @@ namespace BenchmarkTool
             long totalOverheadTicks = 0;
             long totalSleepTimeMs = 0;
 
-            int threadModulus = ((int)(10000.0 / threadCount / _messageTemplates.Count)) * _messageTemplates.Count;
+            int threadModulus = threadCount > 1 ? ((int)(15000.0 / threadCount / _messageTemplates.Count)) * _messageTemplates.Count : (messageCount + 1);
 
             Action<object> threadAction = (state) =>
             {
@@ -99,7 +99,7 @@ namespace BenchmarkTool
                 long overheadTicks = 0;
                 long sleepTimeMs = 0;
 
-                for (int i = 0; i < threadMessageCount; i += _messageTemplates.Count)
+                for (int i = 1; i <= threadMessageCount; i += _messageTemplates.Count)
                 {
                     var startTime = Stopwatch.GetTimestamp();
                     for (int j = 0; j < _messageTemplates.Count; ++j)
