@@ -19,6 +19,8 @@ jobs:
         with:
           submodules: recursive
 
+      - uses: microsoft/setup-msbuild@v2
+
       - name: Restore
         run: msbuild PerformanceTest.sln /t:restore /p:Configuration=Release
 
