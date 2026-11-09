@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (Windows)
+    runs-on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Restore
+        run: msbuild PerformanceTest.sln /t:restore /p:Configuration=Release
+
+      - name: Build
+        run: msbuild PerformanceTest.sln /p:Configuration=Release /verbosity:minimal
